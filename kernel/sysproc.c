@@ -127,43 +127,34 @@ sys_uptime(void)
 int
 sys_pgaccess(void)
 {
-  uint64 base;     // Tham số 1: Địa chỉ bắt đầu kiểm tra
-  int len;         // Tham số 2: Số trang cần kiểm tra
-  uint64 maskaddr; // Tham số 3: Địa chỉ User để trả kết quả về
+  uint64 base;     
+  int len;         
+  uint64 maskaddr; 
 
-  // 1. Nhận 3 tham số từ User
-  if(argaddr(0, &base) < 0 || argint(1, &len) < 0 || argaddr(2, &maskaddr) < 0)
-    return -1;
+  // Thay vì dùng if() < 0, ta chỉ cần gọi trực tiếp các hàm này:
+  argaddr(0, &base);
+  argint(1, &len);
+  argaddr(2, &maskaddr);
 
-  // Giới hạn kiểm tra tối đa 32 trang (tương ứng với 32 bit của 1 biến số nguyên)
+  // ... (Phần code bên dưới giữ nguyên nhé) ...
   if(len > 32 || len < 0)
     return -1;
 
-  unsigned int bitmask = 0;  // Biến tạm để lưu kết quả các bit (1 = đã truy cập)
-  struct proc *p = myproc(); // Lấy tiến trình hiện tại đang chạy
+  unsigned int bitmask = 0;  
+  struct proc *p = myproc(); 
 
-  // 2. Vòng lặp kiểm tra từng trang bộ nhớ
   for(int i = 0; i < len; i++){
-    uint64 va = base + i * PGSIZE; // Địa chỉ ảo của trang thứ i
-
-    // Tra cứu Bảng phân trang (Page Table) để tìm PTE
+    uint64 va = base + i * PGSIZE; 
     pte_t *pte = walk(p->pagetable, va, 0);
 
-    // Nếu PTE có tồn tại (khác 0) và Hợp lệ (PTE_V)
     if(pte != 0 && (*pte & PTE_V)){
-      
-      // Kiểm tra xem bit PTE_A có đang bật sáng không?
       if(*pte & PTE_A){
-        // Bật bit thứ i trong biến kết quả lên 1
         bitmask |= (1 << i); 
-        
-        // CỰC KỲ QUAN TRỌNG: Tắt bit PTE_A đi để reset cho lần theo dõi sau
         *pte &= ~PTE_A;      
       }
     }
   }
 
-  // 3. Trả kết quả (bitmask) từ Kernel về lại biến maskaddr của User
   if(copyout(p->pagetable, maskaddr, (char *)&bitmask, sizeof(bitmask)) < 0)
     return -1;
 

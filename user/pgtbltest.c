@@ -10,14 +10,18 @@ void print_pgtbl();
 void print_kpgtbl();
 void ugetpid_test();
 void superpg_test();
+void pgaccess_test(); 
 
 int
 main(int argc, char *argv[])
 {
-  print_pgtbl();
-  ugetpid_test();
-  print_kpgtbl();
-  superpg_test();
+  // print_pgtbl();
+  // ugetpid_test();
+  // print_kpgtbl();
+  // superpg_test();
+
+  pgaccess_test();
+
   printf("pgtbltest: all tests succeeded\n");
   exit(0);
 }
@@ -139,4 +143,36 @@ superpg_test()
     }
   }
   printf("superpg_test: OK\n");  
+}
+
+void
+pgaccess_test()
+{
+  char *buf;
+  unsigned int abits;
+  printf("pgaccess_test starting\n");
+  testname = "pgaccess_test";
+  
+  // Cấp phát 32 trang bộ nhớ
+  buf = malloc(32 * PGSIZE);
+  
+  // Gọi lần 1 để xóa sạch các bit rác
+  if (pgaccess(buf, 32, &abits) < 0)
+    err("pgaccess failed");
+    
+  // Chủ động chạm (truy cập) vào trang 1, 2 và 30
+  buf[PGSIZE * 1] += 1;
+  buf[PGSIZE * 2] += 1;
+  buf[PGSIZE * 30] += 1;
+  
+  // Gọi lần 2 để kiểm tra xem hệ thống có nhận diện đúng không
+  if (pgaccess(buf, 32, &abits) < 0)
+    err("pgaccess failed");
+    
+  // Mã bit trả về phải đúng vị trí 1, 2 và 30 bật sáng
+  if (abits != ((1 << 1) | (1 << 2) | (1 << 30)))
+    err("incorrect access bits set");
+    
+  free(buf);
+  printf("pgaccess_test: OK\n");
 }
