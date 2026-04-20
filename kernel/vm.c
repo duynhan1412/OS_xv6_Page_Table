@@ -488,10 +488,43 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
 
 #ifdef LAB_PGTBL
-void
-vmprint(pagetable_t pagetable) {
-  // your code here
+// Ham de quy in ra cau truc bang phan trang
+void 
+_vmprint(pagetable_t pagetable, int level) 
+{
+  // Bảng phân trang RISC-V có 512 entries
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    
+    // Chỉ xử lý các PTE hợp lệ (có cờ Valid)
+    if(pte & PTE_V){
+      // In lùi lề theo độ sâu (level)
+      for(int j = 0; j < level; j++){
+        printf(" ..");
+      }
+      
+      // Lấy địa chỉ vật lý (pa) từ pte
+      uint64 pa = PTE2PA(pte);
+      
+      // In ra theo chuẩn format của đề bài
+      printf("%d: pte %p pa %p\n", i, (void*)pte, (void*)pa);
+      
+      // Nếu PTE không trỏ đến trang lá (không có R, W, X), nó trỏ đến page table cấp thấp hơn
+      if((pte & (PTE_R | PTE_W | PTE_X)) == 0){
+        _vmprint((pagetable_t)pa, level + 1);
+      }
+    }
+  }
 }
+
+// In ra bang phan trang
+void 
+vmprint(pagetable_t pagetable) 
+{
+  printf("page table %p\n", pagetable);
+  _vmprint(pagetable, 1);
+}
+
 #endif
 
 
